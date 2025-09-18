@@ -4,7 +4,10 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { useToast } from '../hooks/use-toast';
-import { mockAnalyzeResume, mockInternships } from '../utils/mockData';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const HomePage = () => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -80,25 +83,39 @@ const HomePage = () => {
     setIsAnalyzing(true);
     
     try {
-      // Simulate API call with mock data
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const analysis = mockAnalyzeResume();
-      const matchedInternships = mockInternships.filter(internship => 
-        analysis.score >= internship.score_range[0] && analysis.score <= internship.score_range[1]
-      ).slice(0, 5);
+      const formData = new FormData();
+      formData.append('resume', selectedFile);
 
+      const response = await axios.post(`${API}/analyze-resume`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        timeout: 60000 // 60 second timeout
+      });
+
+      const { analysis, recommendations } = response.data;
       setAnalysisResult(analysis);
-      setRecommendations(matchedInternships);
+      setRecommendations(recommendations);
       
       toast({
         title: "Analysis complete!",
         description: "Your resume has been analyzed successfully.",
       });
     } catch (error) {
+      console.error('Analysis error:', error);
+      
+      let errorMessage = "Something went wrong. Please try again.";
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = "Analysis took too long. Please try again.";
+      } else if (!navigator.onLine) {
+        errorMessage = "No internet connection. Please check your connection.";
+      }
+      
       toast({
         title: "Analysis failed",
-        description: "Something went wrong. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -251,7 +268,7 @@ const HomePage = () => {
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-blue-600 mb-2">
-                    {analysisResult.score}/10
+                    {analysisResult.overall_rating}/10
                   </div>
                   <p className="text-gray-600">Overall Score</p>
                 </div>
@@ -262,7 +279,7 @@ const HomePage = () => {
                     {analysisResult.strengths.map((strength, index) => (
                       <li key={index} className="text-sm text-gray-700 flex items-start">
                         <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-2 flex-shrink-0" />
-                        {strength}
+                        {strength.trim()}
                       </li>
                     ))}
                   </ul>
@@ -274,12 +291,26 @@ const HomePage = () => {
                     {analysisResult.weaknesses.map((weakness, index) => (
                       <li key={index} className="text-sm text-gray-700 flex items-start">
                         <span className="w-2 h-2 bg-orange-500 rounded-full mt-2 mr-2 flex-shrink-0" />
-                        {weakness}
+                        {weakness.trim()}
                       </li>
                     ))}
                   </ul>
                 </div>
               </div>
+
+              {analysisResult.suggestions && analysisResult.suggestions.length > 0 && (
+                <div className="mt-6 pt-6 border-t">
+                  <h4 className="font-semibold text-blue-700 mb-3">Suggestions for Improvement</h4>
+                  <ul className="grid md:grid-cols-2 gap-2">
+                    {analysisResult.suggestions.map((suggestion, index) => (
+                      <li key={index} className="text-sm text-gray-700 flex items-start">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-2 flex-shrink-0" />
+                        {suggestion.trim()}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -290,7 +321,7 @@ const HomePage = () => {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Target className="w-5 h-5 text-blue-600" />
-                <span>Recommended Internships</span>
+                <span>Recommended Internships ({recommendations.length})</span>
               </CardTitle>
               <CardDescription>
                 Based on your skills and resume analysis, here are the best matching internships
@@ -307,7 +338,7 @@ const HomePage = () => {
                         </Badge>
                         <div className="text-right">
                           <div className="text-sm font-medium text-blue-600">
-                            {Math.round(((analysisResult.score - internship.score_range[0]) / (internship.score_range[1] - internship.score_range[0])) * 100)}% Match
+                            {internship.match_percentage}% Match
                           </div>
                         </div>
                       </div>
@@ -326,14 +357,39 @@ const HomePage = () => {
                         <p className="text-sm text-gray-700 line-clamp-3">
                           {internship.description}
                         </p>
+                        
+                        {internship.matched_skills.length > 0 && (
+                          <div>
+                            <div className="flex items-center text-sm font-medium text-green-700 mb-2">
+                              <Code className="w-4 h-4 mr-2" />
+                              Your Matching Skills
+                            </div>
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {internship.matched_skills.map((skill, index) => (
+                                <Badge key={index} variant="default" className="text-xs bg-green-100 text-green-800">
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
                         <div>
                           <div className="flex items-center text-sm font-medium text-gray-700 mb-2">
                             <Code className="w-4 h-4 mr-2" />
-                            Required Skills
+                            All Required Skills
                           </div>
                           <div className="flex flex-wrap gap-1">
                             {internship.skills_required.map((skill, index) => (
-                              <Badge key={index} variant="outline" className="text-xs">
+                              <Badge 
+                                key={index} 
+                                variant="outline" 
+                                className={`text-xs ${
+                                  internship.matched_skills.includes(skill) 
+                                    ? 'border-green-500 text-green-700' 
+                                    : 'border-gray-300 text-gray-600'
+                                }`}
+                              >
                                 {skill}
                               </Badge>
                             ))}
