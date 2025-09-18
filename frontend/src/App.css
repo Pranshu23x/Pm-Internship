@@ -2,7 +2,29 @@
   min-height: 100vh;
 }
 
-/* Custom scrollbar */
+/* Custom transitions for drag and drop */
+.scale-102 {
+  transform: scale(1.02);
+}
+
+.scale-110 {
+  transform: scale(1.10);
+}
+
+/* Prevent text selection during drag operations */
+.cursor-pointer {
+  user-select: none;
+}
+
+/* Smooth drag and drop animations */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.duration-200 {
+  transition-duration: 200ms;
+}
 ::-webkit-scrollbar {
   width: 6px;
 }
