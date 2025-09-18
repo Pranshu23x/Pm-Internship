@@ -150,15 +150,54 @@ const HomePage = () => {
             <div className="flex flex-col items-center space-y-4">
               <div className="w-full max-w-md">
                 <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer"
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 cursor-pointer ${
+                    isDragOver 
+                      ? 'border-blue-500 bg-blue-50 scale-102' 
+                      : selectedFile 
+                        ? 'border-green-400 bg-green-50' 
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                  }`}
                   onClick={() => fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
                 >
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-lg font-medium text-gray-700 mb-2">
-                    {selectedFile ? selectedFile.name : 'Choose PDF file'}
+                  <div className={`transition-all duration-200 ${isDragOver ? 'scale-110' : ''}`}>
+                    <Upload className={`w-12 h-12 mx-auto mb-4 ${
+                      isDragOver 
+                        ? 'text-blue-500' 
+                        : selectedFile 
+                          ? 'text-green-500' 
+                          : 'text-gray-400'
+                    }`} />
+                  </div>
+                  <p className={`text-lg font-medium mb-2 ${
+                    isDragOver 
+                      ? 'text-blue-700' 
+                      : selectedFile 
+                        ? 'text-green-700' 
+                        : 'text-gray-700'
+                  }`}>
+                    {isDragOver 
+                      ? 'Drop your PDF here' 
+                      : selectedFile 
+                        ? selectedFile.name 
+                        : 'Choose PDF file or drag & drop'
+                    }
                   </p>
-                  <p className="text-sm text-gray-500">
-                    Click to browse or drag and drop your resume
+                  <p className={`text-sm ${
+                    isDragOver 
+                      ? 'text-blue-600' 
+                      : selectedFile 
+                        ? 'text-green-600' 
+                        : 'text-gray-500'
+                  }`}>
+                    {isDragOver 
+                      ? 'Release to upload' 
+                      : selectedFile 
+                        ? 'Ready to analyze' 
+                        : 'Click to browse or drag and drop your resume'
+                    }
                   </p>
                 </div>
                 <input
