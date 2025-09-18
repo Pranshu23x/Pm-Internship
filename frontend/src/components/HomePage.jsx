@@ -11,21 +11,59 @@ const HomePage = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef(null);
   const { toast } = useToast();
 
-  const handleFileSelect = (event) => {
-    const file = event.target.files[0];
+  const validateAndSetFile = (file) => {
     if (file && file.type === 'application/pdf') {
       setSelectedFile(file);
       setAnalysisResult(null);
       setRecommendations([]);
+      return true;
     } else {
       toast({
         title: "Invalid file type",
         description: "Please select a PDF file.",
         variant: "destructive"
       });
+      return false;
+    }
+  };
+
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    validateAndSetFile(file);
+  };
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(false);
+    
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      if (validateAndSetFile(file)) {
+        // Update the file input to reflect the dropped file
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        if (fileInputRef.current) {
+          fileInputRef.current.files = dt.files;
+        }
+      }
     }
   };
 
